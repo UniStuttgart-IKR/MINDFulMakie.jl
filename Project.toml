@@ -18,6 +18,7 @@ NestedGraphs = "03c36417-ddab-428a-818d-5359aee292ef"
 NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
 
 [compat]
+Colors = "0.12"
 julia = "1"
 
 [extras]
