@@ -20,6 +20,7 @@ NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
+NestedGraphMakie = "0.1"
 julia = "1"
 AbstractTrees = "0.4.4"
 Colors = "0.12"
