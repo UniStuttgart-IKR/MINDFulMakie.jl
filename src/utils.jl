@@ -55,6 +55,7 @@ function _recursive_getmultidomainremoteintents!(remoteintents::Vector{Tuple{UUI
     end
 end
 
+# moved to MINDFul.jl
 """
 $(TYPEDSIGNATURES) 
 
@@ -72,10 +73,11 @@ function createmultidomainIBNAttributeGraph(ibnf::MINDF.IBNFramework)
     return mdag
 end
 
+# moved to MINDFul.jl
 function _recursive_createmultidomainIBNAttributeGraph!(mdag::MINDF.IBNAttributeGraph, ibnfuuids::Vector{UUID}, myibnf::IBNFramework, remoteibnf::AbstractIBNFHandler)
     ibnfid = MINDF.getibnfid(remoteibnf)
     ibnfid ∈ ibnfuuids && return
-    remoteibnag = MINDF.requestibnattributegraph(myibnf, remoteibnf)
+    remoteibnag = MINDF.requestibnattributegraph_init(myibnf, remoteibnf)
 
     for v in vertices(remoteibnag)
         nodeview = MINDF.getnodeview(remoteibnag, v)
@@ -119,7 +121,7 @@ end
 function _recursive_getattributegraphneighbors(dictneiag::Dict{UUID, MINDF.IBNAttributeGraph}, myibnf, remoteibnf)
     ibnfid = MINDF.getibnfid(remoteibnf)
     ibnfid ∈ keys(dictneiag) && return
-    remoteibnag = MINDF.requestibnattributegraph(myibnf, remoteibnf)
+    remoteibnag = MINDF.requestibnattributegraph_init(myibnf, remoteibnf)
     dictneiag[ibnfid] = remoteibnag
     for interibnf in MINDF.getibnfhandlers(remoteibnf)
         _recursive_getattributegraphneighbors(dictneiag, myibnf, interibnf)
@@ -135,6 +137,7 @@ function getcorrespondingibnagedge(mdag::MINDF.IBNAttributeGraph, edge::Edge, di
     return firstibnag, Edge(src_idx, dst_idx)
 end
 
+# moved to MINDFul.jl
 function findoffsetedge(mdag::MINDF.IBNAttributeGraph, remoteibnag::MINDF.IBNAttributeGraph, e::Edge)
     globalnode_src = MINDF.getglobalnode(MINDF.getproperties(MINDF.getnodeview(remoteibnag, src(e))))
     globalnode_dst = MINDF.getglobalnode(MINDF.getproperties(MINDF.getnodeview(remoteibnag, dst(e))))

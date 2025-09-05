@@ -68,16 +68,16 @@ function Makie.plot!(intplot::IntentPlot)
         labs
     end
 
-    # try 
-    GraphMakie.graphplot!(intplot, mdidag_obs; layout=daglayout, nlabels=labsob, edge_color=edgecolors)
-    # catch e
-    #     if e isa MathOptInterface.ResultIndexBoundsError{MathOptInterface.ObjectiveValue}
-    #         # without special layout
-    #         GraphMakie.graphplot!(intplot, mdidag_obs; nlabels=labsob)
-    #     else 
-    #         rethrow(e)
-    #     end
-    # end
+    try 
+        GraphMakie.graphplot!(intplot, mdidag_obs; layout=daglayout, nlabels=labsob, edge_color=edgecolors)
+    catch e
+        if e isa MathOptInterface.ResultIndexBoundsError{MathOptInterface.ObjectiveValue}
+            # without special layout
+            GraphMakie.graphplot!(intplot, mdidag_obs; nlabels=labsob, edge_color=edgecolors)
+        else 
+            rethrow(e)
+        end
+    end
 
     return intplot
 end
