@@ -123,8 +123,10 @@ function _recursive_getattributegraphneighbors(dictneiag::Dict{UUID, MINDF.IBNAt
     ibnfid ∈ keys(dictneiag) && return
     remoteibnag = MINDF.requestibnattributegraph_init(myibnf, remoteibnf)
     dictneiag[ibnfid] = remoteibnag
-    for interibnf in MINDF.getibnfhandlers(remoteibnf)
-        _recursive_getattributegraphneighbors(dictneiag, myibnf, interibnf)
+    if remoteibnf isa IBNFramework
+        for interibnf in MINDF.getibnfhandlers(remoteibnf)
+            _recursive_getattributegraphneighbors(dictneiag, myibnf, interibnf)
+        end
     end
 end
 
