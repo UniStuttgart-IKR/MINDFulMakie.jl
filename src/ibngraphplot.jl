@@ -6,14 +6,14 @@ Base function to plot an `AttributeGraph` made for `IBNFramework`
 @recipe(IBNGraphPlot, ibnattributegraph) do scene
     Theme(
         showmap = false,
-        shownodelocallabels = false
+        shownodelocallabels = false,
+        graphattr = (;)
     )
 end
 
 function Makie.plot!(ibngraphplot::IBNGraphPlot)
-    ibnag = ibngraphplot.ibnattributegraph
 
-    nodelabs =  lift(ibnag, ibngraphplot.shownodelocallabels) do ibnag, shownodelocallabels
+    map!(ibngraphplot.attributes, [:ibnattributegraph, :shownodelocallabels], :nodelabs) do ibnag, shownodelocallabels
         nodelabs = String[]
         for (i, nodeviews) in enumerate(MINDF.getnodeviews(ibnag))
             labelbuilder = IOBuffer()
@@ -24,8 +24,12 @@ function Makie.plot!(ibngraphplot::IBNGraphPlot)
         end
         return nodelabs
     end
+    #
+    map!(ibngraphplot.attributes, [:ibnattributegraph], :coords) do ibnag
+        return coordlayout(ibnag)
+    end
 
-    coords = coordlayout(ibnag[])
-    GraphMakie.graphplot!(ibngraphplot, ibnag; layout = x -> coords, arrow_show=false, edge_plottype=:linesegments, nlabels=nodelabs, ibngraphplot.attributes...)
+    GraphMakie.graphplot!(ibngraphplot, ibngraphplot.ibnattributegraph; layout=ibngraphplot.coords, arrow_show=false, force_straight_edges=true, nlabels=ibngraphplot.nodelabs, ibngraphplot.graphattr[]...)
+
     return ibngraphplot
 end

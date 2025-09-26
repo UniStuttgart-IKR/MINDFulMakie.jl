@@ -30,7 +30,7 @@ end
 function Makie.plot!(ibnplot::IBNPlot)
     ibnf = ibnplot.ibnf
 
-    ibnag = lift(ibnplot.multidomain, ibnf) do multidomain, ibnf
+    map!(ibnplot.attributes, [:multidomain, :ibnf], :ibnag) do multidomain, ibnf
         if multidomain
             return createmultidomainIBNAttributeGraph(ibnf)
         else
@@ -38,7 +38,7 @@ function Makie.plot!(ibnplot::IBNPlot)
         end
     end
 
-    dictneiag = lift(ibnplot.multidomain, ibnf) do multidomain, ibnf
+    map!(ibnplot.attributes, [:multidomain, :ibnf], :dictneiag ) do multidomain, ibnf
         if multidomain
             return getattributegraphneighbors(ibnf)
         else
@@ -47,7 +47,7 @@ function Makie.plot!(ibnplot::IBNPlot)
     end
 
     # how many different global ibnfs id exist ?
-    nodecolors = lift(ibnag) do ibnag 
+    map!(ibnplot.attributes, [:ibnag], :nodecolors ) do ibnag
         ibnfids = unique(MINDF.getibnfid.(MINDF.getglobalnode.(MINDF.getproperties.(MINDF.getnodeviews(ibnag)))))
         ibnfidxdict = Dict(ibnfid => i for (i,ibnfid) in enumerate(ibnfids))
         colors = Colors.distinguishable_colors(length(ibnfids), [Colors.@colorant_str("white")]; dropseed=true)
@@ -58,9 +58,8 @@ function Makie.plot!(ibnplot::IBNPlot)
         return nodecolors
     end
 
-    nodelabs =  lift(ibnag, ibnplot.shownodelabels) do ibnag, shownodelabels
+    map!(ibnplot.attributes, [:ibnag, :shownodelabels], :nodelabs ) do ibnag, shownodelabels
         nodelabs = String[]
-        # for localnode in MINDF.getlocalnode.(MINDF.getglobalnode.(MINDF.getnodeproperties.(MINDF.getnodeviews(ibnag))))
         for globalnode in MINDF.getglobalnode.(MINDF.getnodeproperties.(MINDF.getnodeviews(ibnag)))
             labelbuilder = IOBuffer()
             if shownodelabels == :global
@@ -73,11 +72,13 @@ function Makie.plot!(ibnplot::IBNPlot)
         return nodelabs
     end
 
-    ibngraphplot!(ibnplot, ibnag; node_color=nodecolors, nlabels=nodelabs, ibnplot.attributes...)
+    ibngraphplot!(ibnplot, ibnplot.attributes, ibnplot.ibnag; graphattr=(;node_color=ibnplot.nodecolors, nlabels=ibnplot.nodelabs))
 
     gmp = ibnplot.plots[1].plots[1]
 
-    extralines_color_width_scatter_color_size = lift(ibnf, ibnplot.intentids, ibnplot.showonlyinstalledintents, ibnag, gmp.node_pos, nodecolors) do ibnf, intentids, showonlyinstalledintents, ibnag, node_pos, nodecolors
+    Makie.add_input!(ibnplot.attributes, :node_pos, gmp.node_pos)
+
+    map!(ibnplot.attributes, [:ibnf, :intentids, :showonlyinstalledintents, :ibnag, :node_pos, :nodecolors ], [:extralines, :extralinescolors, :extralineswidth, :extrascatter, :extrascattercolors, :extrascattersize] ) do ibnf, intentids, showonlyinstalledintents, ibnag, node_pos, nodecolors
         manyextralines = Vector{Vector{GM.Line{Point2f}}}()
         manyextrascattercoordinates = Vector{Vector{Point2f}}()
         
@@ -142,41 +143,33 @@ function Makie.plot!(ibnplot::IBNPlot)
         extralines = reduce(vcat, manyextralines)
         extrascatter = reduce(vcat, manyextrascattercoordinates)
 
-        return extralines, extralinescolors, extralineswidth, extrascatter, extrascattercolors, extrascattersize
+        return (extralines, extralinescolors, extralineswidth, extrascatter, extrascattercolors, extrascattersize)
     end
 
-    extralines = @lift $(extralines_color_width_scatter_color_size)[1]
-    extralinescolors = @lift alphacolor.($(extralines_color_width_scatter_color_size)[2], 0.5)
-    extralineswidth = @lift $(extralines_color_width_scatter_color_size)[3]
-    extrascatter = @lift $(extralines_color_width_scatter_color_size)[4]
-    extrascattercolors = @lift alphacolor.($(extralines_color_width_scatter_color_size)[5], 0.5)
-    extrascattersize = @lift $(extralines_color_width_scatter_color_size)[6]
-
-    myedgeplot = edgeplot!(ibnplot, extralines; color=extralinescolors, linewidth=extralineswidth)
-    translate!(myedgeplot, 0, 0, -2)
-    myscatterplot = scatter!(ibnplot, extrascatter; marker = :xcross, color=extrascattercolors, markersize=extrascattersize)
-    translate!(myscatterplot, 0, 0, -1)
-
-    # edge status
-    linkfailedscatter_rotation = lift(ibnag, dictneiag, gmp.node_pos) do ibnag, dictneiag, node_pos
-        drawbrokenlinkstatus(ibnag, dictneiag, node_pos)
+    if !isempty(ibnplot.extralines[])
+        myedgeplot = edgeplot!(ibnplot, ibnplot.extralines; color=ibnplot.extralinescolors, linewidth=ibnplot.extralineswidth)
+        translate!(myedgeplot, 0, 0, -2)
     end
-    linkfailedscatter = @lift $(linkfailedscatter_rotation)[1]
-    linkfailedroration = @lift $(linkfailedscatter_rotation)[2]
-    scatter!(ibnplot, linkfailedscatter; marker='/', rotation = linkfailedroration ,color=:red, markersize=15)
 
-    spectrumpolyscolors = lift(ibnag, dictneiag, gmp.node_pos, ibnplot.spectrumdistancefromvertex, ibnplot.spectrumverticalheight, ibnplot.spectrumdistancefromedge, ibnplot.showspectrumslots) do ibnag, dictneiag, node_pos, spectrumdistancefromvertex, spectrumverticalheight, spectrumdistancefromedge, showspectrumslots
-        if showspectrumslots
-            drawspectrumboxes(ibnag, dictneiag, node_pos, spectrumdistancefromvertex, spectrumverticalheight, spectrumdistancefromedge)
-        else
-            drawdummypoly(ibnag, node_pos)
-        end
-    end
-    spectrumpolys = @lift $(spectrumpolyscolors)[1]
-    spectrumcolors = @lift $(spectrumpolyscolors)[2]
-
-    polyplots = poly!(ibnplot, spectrumpolys; color=spectrumcolors)
-    translate!(polyplots, 0, 0, -3)
+    # myscatterplot = scatter!(ibnplot, ibnplot.extrascatter; marker = :xcross, color=ibnplot.extrascattercolors, markersize=ibnplot.extrascattersize)
+    # translate!(myscatterplot, 0, 0, -1)
+    #
+    # # edge status
+    # map!(ibnplot.attributes, [:ibnag, :dictneiag, :node_pos], [:linkfailedscatter, :linkfailedroration]  ) do ibnag, dictneiag, node_pos
+    #     drawbrokenlinkstatus(ibnag, dictneiag, node_pos)
+    # end
+    # scatter!(ibnplot, ibnplot.linkfailedscatter; marker='/', rotation = ibnplot.linkfailedroration ,color=:red, markersize=15)
+    #
+    # map!(ibnplot.attributes, [:ibnag, :dictneiag, :node_pos, :spectrumdistancefromvertex, :spectrumverticalheight, :spectrumdistancefromedge, :showspectrumslots], [:spectrumpolys, :spectrumcolors] ) do ibnag, dictneiag, node_pos, spectrumdistancefromvertex, spectrumverticalheight, spectrumdistancefromedge, showspectrumslots
+    #     if showspectrumslots
+    #         drawspectrumboxes(ibnag, dictneiag, node_pos, spectrumdistancefromvertex, spectrumverticalheight, spectrumdistancefromedge)
+    #     else
+    #         drawdummypoly(ibnag, node_pos)
+    #     end
+    # end
+    #
+    # polyplots = poly!(ibnplot, ibnplot.spectrumpolys; color=ibnplot.spectrumcolors)
+    # translate!(polyplots, 0, 0, -3)
 
     return ibnplot
 end

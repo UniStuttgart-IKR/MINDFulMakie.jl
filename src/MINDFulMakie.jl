@@ -11,7 +11,6 @@ import MathOptInterface
 import AbstractTrees
 
 # TODO: delete
-import MetaGraphsNext as MGN
 import GraphMakie as GM
 
 import Colors: alphacolor

@@ -14,7 +14,6 @@ LayeredLayouts = "f4a74d36-062a-4d48-97cd-1356bad1de4e"
 MINDFul = "437ce7a4-cd80-4539-9a29-b274cfe157d6"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
-MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
 NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
@@ -22,20 +21,18 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 [compat]
 AbstractTrees = "0.4.4"
 Colors = "0.13"
-DocStringExtensions = "0.9.3"
-GraphMakie = "0.5.5"
-Graphs = "1.8"
+DocStringExtensions = "0.9"
+GraphMakie = "0.6"
+Graphs = "1"
 LayeredLayouts = "0.2.9"
 MINDFul = "0.4.0"
-Makie = "0.22"
-MathOptInterface = "1.38.1"
-MetaGraphsNext = "0.7"
+Makie = "0.24"
 NetworkLayout = "0.4.5"
-Printf = "1.11.0"
+Printf = "1"
 julia = "1"
 
-[sources]
-MINDFul = {url = "https://github.com/UniStuttgart-IKR/MINDFul.jl"}
+# [sources]
+# MINDFul = {url = "https://github.com/UniStuttgart-IKR/MINDFul.jl"}
  
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

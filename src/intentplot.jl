@@ -23,29 +23,22 @@ end
 
 #TODO plot only descendants of the idagnode
 function Makie.plot!(intplot::IntentPlot)
-    md_obs = lift(intplot.ibnf, intplot.intentid, intplot.subidag, intplot.multidomain) do ibnf, intentid, subidag, multidomain
+
+    map!(intplot.attributes, [:ibnf, :intentid, :subidag, :multidomain], [:idagsdict, :mdidag, :mdidagmap] ) do ibnf, intentid, subidag, multidomain
         idagsdict = multidomain ? getmultidomainIntentDAGs(ibnf) : Dict(getibnfid(ibnf) => getidag(ibnf))
         remoteintents, remoteintents_precon = getmultidomainremoteintents(idagsdict, getibnfid(ibnf), intentid, subidag)
         mdidag, mdidagmap = buildmdidagandmap(idagsdict, getibnfid(ibnf), intentid, remoteintents, remoteintents_precon, subidag)
-        # @info "md_obs entered", mdidagmap
         return idagsdict, mdidag, mdidagmap
     end
-    idagsdict_obs = @lift $(md_obs)[1]
-    mdidag_obs = @lift $(md_obs)[2]
-    mdidagmap_obs = @lift $(md_obs)[3]
 
-    edgecolors = lift(md_obs) do allmd
-        mdidag = allmd[2]
-        mdidagmap = allmd[3]
+    map!(intplot.attributes, [:mdidag, :mdidagmap], :edgecolors) do mdidag, mdidagmap
         [let
             mdidagmap[src(e)][1] == mdidagmap[dst(e)][1] ? :black : :red
          end 
          for e in edges(mdidag)]
     end
 
-    labsob = lift(intplot.ibnf, intplot.showintent, intplot.showstate, md_obs) do ibnf, showintent, showstate, allmd
-        idagsdict = allmd[1]
-        mdidagmap = allmd[3]
+    map!(intplot.attributes, [:ibnf, :showintent, :showstate, :idagsdict, :mdidagmap], :labsob ) do ibnf, showintent, showstate, idagsdict, mdidagmap
         labs = String[]
 
         for (ibnfid, intentid) in mdidagmap
@@ -69,12 +62,13 @@ function Makie.plot!(intplot::IntentPlot)
     end
 
     try 
-        GraphMakie.graphplot!(intplot, mdidag_obs; layout=daglayout, nlabels=labsob, edge_color=edgecolors)
+        GraphMakie.graphplot!(intplot, intplot.mdidag; layout=daglayout, nlabels=intplot.labsob, edge_color=intplot.edgecolors)
     catch e
-        if e isa MathOptInterface.ResultIndexBoundsError{MathOptInterface.ObjectiveValue}
+        if e isa Makie.ComputePipeline.ResolveException{MathOptInterface.ResultIndexBoundsError{MathOptInterface.ObjectiveValue}}
             # without special layout
-            GraphMakie.graphplot!(intplot, mdidag_obs; nlabels=labsob, edge_color=edgecolors)
+            GraphMakie.graphplot!(intplot, intplot.mdidag; nlabels=intplot.labsob)#, edge_color=intplot.edgecolors)
         else 
+            # GraphMakie.graphplot!(intplot, SimpleGraph())#, edge_color=intplot.edgecolors)
             rethrow(e)
         end
     end

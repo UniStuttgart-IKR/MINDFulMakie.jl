@@ -30,7 +30,9 @@ function savefig(fig)
     save(joinpath(TMPDIR, "test-$(counter+1).png"), fig)
 end
 
-function loadmultidomaintestibnfs()
+intalgcompkspff(ibnag::MINDF.IBNAttributeGraph) = KShorestPathFirstFitCompilation(ibnag, 10)
+
+function loadmultidomaintestibnfs(; compalgfunc::F=intalgcompkspff) where {F<:Function}
     domains_name_graph = first(JLD2.load(TESTDIR*"/data/itz_IowaStatewideFiberMap-itz_Missouri-itz_UsSignal_addedge_24-23,23-15__(1,9)-(2,3),(1,6)-(2,54),(1,1)-(2,21),(1,16)-(3,18),(1,17)-(3,25),(2,27)-(3,11).jld2"))[2]
 
 
@@ -38,7 +40,8 @@ function loadmultidomaintestibnfs()
         let
             ag = name_graph[2]
             ibnag = MINDF.default_IBNAttributeGraph(ag)
-            ibnf = IBNFramework(ibnag)
+            intcompalg = compalgfunc(ibnag)
+            ibnf = IBNFramework(ibnag, intcompalg)
         end for name_graph in domains_name_graph
     ]
 
@@ -59,18 +62,18 @@ ibnfs = loadmultidomaintestibnfs()
 
 # with border node
 conintent_bordernode = MINDF.ConnectivityIntent(MINDF.GlobalNode(UUID(1), 4), MINDF.GlobalNode(UUID(3), 25), u"100.0Gbps")
-intentuuid_bordernode = MINDF.addintent!(ibnfs[1], conintent_bordernode, MINDF.NetworkOperator())
+intentuuid_bordernode, _ = MINDF.addintent!(ibnfs[1], conintent_bordernode, MINDF.NetworkOperator())
 
-MINDF.compileintent!(ibnfs[1], intentuuid_bordernode, MINDF.KShorestPathFirstFitCompilation(5))
+MINDF.compileintent!(ibnfs[1], intentuuid_bordernode)
  
 # install
 MINDF.installintent!(ibnfs[1], intentuuid_bordernode; verbose=true)
 
 # to neighboring domain
 conintent_neigh = MINDF.ConnectivityIntent(MINDF.GlobalNode(UUID(1), 4), MINDF.GlobalNode(UUID(3), 47), u"100.0Gbps")
-intentuuid_neigh = MINDF.addintent!(ibnfs[1], conintent_neigh, MINDF.NetworkOperator())
+intentuuid_neigh, _ = MINDF.addintent!(ibnfs[1], conintent_neigh, MINDF.NetworkOperator())
 
-MINDF.compileintent!(ibnfs[1], intentuuid_neigh, MINDF.KShorestPathFirstFitCompilation(5))
+MINDF.compileintent!(ibnfs[1], intentuuid_neigh)
 
 MINDF.installintent!(ibnfs[1], intentuuid_neigh; verbose=true)
 
@@ -89,8 +92,8 @@ function populateibnfs(ibnfs, num; sourceibnf=nothing)
         rate = GBPSf(rand(rng)*100) 
 
         conintent = ConnectivityIntent(srcnglobalnode, dstglobalnode, rate)
-        conintentid = addintent!(srcibnf, conintent, NetworkOperator())
-        compileintent!(srcibnf, conintentid, KShorestPathFirstFitCompilation(10)) == ReturnCodes.SUCCESS
+        conintentid, _ = addintent!(srcibnf, conintent, NetworkOperator())
+        compileintent!(srcibnf, conintentid) == ReturnCodes.SUCCESS
         installintent!(srcibnf, conintentid; verbose=false) == ReturnCodes.SUCCESS
         issatisfied(srcibnf, conintentid)
     end
