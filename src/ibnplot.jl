@@ -151,25 +151,25 @@ function Makie.plot!(ibnplot::IBNPlot)
         translate!(myedgeplot, 0, 0, -2)
     end
 
-    # myscatterplot = scatter!(ibnplot, ibnplot.extrascatter; marker = :xcross, color=ibnplot.extrascattercolors, markersize=ibnplot.extrascattersize)
-    # translate!(myscatterplot, 0, 0, -1)
-    #
-    # # edge status
-    # map!(ibnplot.attributes, [:ibnag, :dictneiag, :node_pos], [:linkfailedscatter, :linkfailedroration]  ) do ibnag, dictneiag, node_pos
-    #     drawbrokenlinkstatus(ibnag, dictneiag, node_pos)
-    # end
-    # scatter!(ibnplot, ibnplot.linkfailedscatter; marker='/', rotation = ibnplot.linkfailedroration ,color=:red, markersize=15)
-    #
-    # map!(ibnplot.attributes, [:ibnag, :dictneiag, :node_pos, :spectrumdistancefromvertex, :spectrumverticalheight, :spectrumdistancefromedge, :showspectrumslots], [:spectrumpolys, :spectrumcolors] ) do ibnag, dictneiag, node_pos, spectrumdistancefromvertex, spectrumverticalheight, spectrumdistancefromedge, showspectrumslots
-    #     if showspectrumslots
-    #         drawspectrumboxes(ibnag, dictneiag, node_pos, spectrumdistancefromvertex, spectrumverticalheight, spectrumdistancefromedge)
-    #     else
-    #         drawdummypoly(ibnag, node_pos)
-    #     end
-    # end
-    #
-    # polyplots = poly!(ibnplot, ibnplot.spectrumpolys; color=ibnplot.spectrumcolors)
-    # translate!(polyplots, 0, 0, -3)
+    myscatterplot = scatter!(ibnplot, ibnplot.extrascatter; marker = :xcross, color=ibnplot.extrascattercolors, markersize=ibnplot.extrascattersize)
+    translate!(myscatterplot, 0, 0, -1)
+
+    # edge status
+    map!(ibnplot.attributes, [:ibnag, :dictneiag, :node_pos], [:linkfailedscatter, :linkfailedroration]  ) do ibnag, dictneiag, node_pos
+        drawbrokenlinkstatus(ibnag, dictneiag, node_pos)
+    end
+    scatter!(ibnplot, ibnplot.linkfailedscatter; marker='/', rotation = ibnplot.linkfailedroration ,color=:red, markersize=15)
+
+    map!(ibnplot.attributes, [:ibnag, :dictneiag, :node_pos, :spectrumdistancefromvertex, :spectrumverticalheight, :spectrumdistancefromedge, :showspectrumslots], [:spectrumpolys, :spectrumcolors] ) do ibnag, dictneiag, node_pos, spectrumdistancefromvertex, spectrumverticalheight, spectrumdistancefromedge, showspectrumslots
+        if showspectrumslots
+            drawspectrumboxes(ibnag, dictneiag, node_pos, spectrumdistancefromvertex, spectrumverticalheight, spectrumdistancefromedge)
+        else
+            drawdummypoly(ibnag, node_pos)
+        end
+    end
+
+    polyplots = poly!(ibnplot, ibnplot.spectrumpolys; color=ibnplot.spectrumcolors)
+    translate!(polyplots, 0, 0, -3)
 
     return ibnplot
 end
