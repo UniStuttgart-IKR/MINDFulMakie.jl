@@ -17,7 +17,8 @@ Plot the intent DAG based on the given intent
         showintent = false,
         intentid = nothing,
         subidag = :descendants,
-        multidomain = false
+        multidomain = false,
+        graphattr = (;)
     )
 end
 
@@ -26,8 +27,8 @@ function Makie.plot!(intplot::IntentPlot)
 
     map!(intplot.attributes, [:ibnf, :intentid, :subidag, :multidomain], [:idagsdict, :mdidag, :mdidagmap] ) do ibnf, intentid, subidag, multidomain
         idagsdict = multidomain ? getmultidomainIntentDAGs(ibnf) : Dict(getibnfid(ibnf) => getidag(ibnf))
-        remoteintents, remoteintents_precon = getmultidomainremoteintents(idagsdict, getibnfid(ibnf), intentid, subidag)
-        mdidag, mdidagmap = buildmdidagandmap(idagsdict, getibnfid(ibnf), intentid, remoteintents, remoteintents_precon, subidag)
+        remoteintents, remoteintents_precon, directionforward = getmultidomainremoteintents(idagsdict, getibnfid(ibnf), intentid, subidag)
+        mdidag, mdidagmap = buildmdidagandmap(idagsdict, getibnfid(ibnf), intentid, remoteintents, remoteintents_precon, directionforward, subidag)
         return idagsdict, mdidag, mdidagmap
     end
 
@@ -61,16 +62,20 @@ function Makie.plot!(intplot::IntentPlot)
         labs
     end
 
-    try 
-        GraphMakie.graphplot!(intplot, intplot.mdidag; layout=daglayout, nlabels=intplot.labsob, edge_color=intplot.edgecolors)
-    catch e
-        if e isa Makie.ComputePipeline.ResolveException{MathOptInterface.ResultIndexBoundsError{MathOptInterface.ObjectiveValue}}
-            # without special layout
-            GraphMakie.graphplot!(intplot, intplot.mdidag; nlabels=intplot.labsob)#, edge_color=intplot.edgecolors)
-        else 
-            # GraphMakie.graphplot!(intplot, SimpleGraph())#, edge_color=intplot.edgecolors)
-            rethrow(e)
+    if Graphs.nv(intplot.mdidag[]) > 2
+        try 
+            GraphMakie.graphplot!(intplot, intplot.mdidag; layout=daglayout, nlabels=intplot.labsob, edge_color=intplot.edgecolors, intplot.graphattr[]...)
+        catch e
+            # if e isa Makie.ComputePipeline.ResolveException{MathOptInterface.ResultIndexBoundsError{MathOptInterface.ObjectiveValue}}
+                # without special layout
+                GraphMakie.graphplot!(intplot, intplot.mdidag; nlabels=intplot.labsob, intplot.graphattr[]...)#, edge_color=intplot.edgecolors)
+            # else 
+                # GraphMakie.graphplot!(intplot, SimpleGraph())#, edge_color=intplot.edgecolors)
+                # rethrow(e)
+            # end
         end
+    else
+        GraphMakie.graphplot!(intplot, intplot.mdidag; nlabels=intplot.labsob, intplot.graphattr[]...)#, edge_color=intplot.edgecolors)
     end
 
     return intplot
@@ -111,20 +116,29 @@ end
 Starting from (ibnfid, intentid) construct the multi domain intent DAG
 Return the mdidag and the mapping as `(ibnfid, intentid)`
 """
-function buildmdidagandmap(idagsdict::Dict{UUID, IntentDAG}, ibnfid::UUID, intentid::Union{UUID,Nothing}, remoteintents::Vector{Tuple{UUID, UUID}}, remoteintents_precon::Vector{Tuple{UUID, UUID}}, subidag::Symbol)
+function buildmdidagandmap(idagsdict::Dict{UUID, IntentDAG}, ibnfid::UUID, intentid::Union{UUID,Nothing}, remoteintents::Vector{Tuple{UUID, UUID}}, remoteintents_precon::Vector{Tuple{UUID, UUID}}, directionforward::Vector{Bool}, subidag::Symbol)
     mdidag = SimpleDiGraph{Int}()
     mdidagmap = Vector{Tuple{UUID, UUID}}()
 
     addgraphtograph!(mdidag, mdidagmap, idagsdict, ibnfid, intentid, subidag)
 
-    for ((previbnfid, previntentid), (ibnfid, intentid)) in zip(remoteintents_precon, remoteintents)
-        haskey(idagsdict, ibnfid) || break
-        addgraphtograph!(mdidag, mdidagmap, idagsdict, ibnfid, intentid, subidag)
+    for ((previbnfid, previntentid), (ibnfid2, intentid), dirfor) in zip(remoteintents_precon, remoteintents, directionforward)
+        if ibnfid2 !== ibnfid
+            haskey(idagsdict, ibnfid2) || break
+            addgraphtograph!(mdidag, mdidagmap, idagsdict, ibnfid2, intentid, subidag)
+        else
+            haskey(idagsdict, previbnfid) || break
+            addgraphtograph!(mdidag, mdidagmap, idagsdict, previbnfid, intentid, subidag)
+        end
         src_ibnfid_intentid = (previbnfid, previntentid)
-        dst_ibnfid_intentid = (ibnfid, intentid)
+        dst_ibnfid_intentid = (ibnfid2, intentid)
         srcidx = something(findfirst(==(src_ibnfid_intentid), mdidagmap))
         dstidx = something(findfirst(==(dst_ibnfid_intentid), mdidagmap))
-        add_edge!(mdidag, srcidx, dstidx)
+        if dirfor
+            add_edge!(mdidag, srcidx, dstidx)
+        else
+            add_edge!(mdidag, dstidx, srcidx)
+        end
     end
     return mdidag, mdidagmap
 end

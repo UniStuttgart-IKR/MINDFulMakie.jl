@@ -23,7 +23,8 @@ Plot the spectrum slots with following properties
         showspectrumslots = false,
         spectrumdistancefromedge = 0.0,
         spectrumdistancefromvertex = 0.0,
-        spectrumverticalheight = 0.1
+        spectrumverticalheight = 0.1,
+        graphattr = (;)
     )
 end
 
@@ -72,7 +73,7 @@ function Makie.plot!(ibnplot::IBNPlot)
         return nodelabs
     end
 
-    ibngraphplot!(ibnplot, ibnplot.attributes, ibnplot.ibnag; graphattr=(;node_color=ibnplot.nodecolors, nlabels=ibnplot.nodelabs))
+    ibngraphplot!(ibnplot, ibnplot.attributes, ibnplot.ibnag; graphattr=(;node_color=ibnplot.nodecolors, nlabels=ibnplot.nodelabs, nlabels_fontsize=20))
 
     gmp = ibnplot.plots[1].plots[1]
 

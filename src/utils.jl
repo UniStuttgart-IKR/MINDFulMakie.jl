@@ -31,25 +31,43 @@ Return a `Vector{Tuple{UUID, UUID}}`, with the first being the ibnfid and the se
 Start from ibnfid, and intentid
 """
 function getmultidomainremoteintents(idagsdict::Dict{UUID, IntentDAG}, ibnfid::UUID, intentid::Union{UUID,Nothing}, subidag::Symbol)
+    calltups = Vector{Tuple{UUID, UUID}}()
+    directionforward = Vector{Bool}()
     remoteintents = Vector{Tuple{UUID, UUID}}()
     # previous idagnode connection of the remote. To cross connect to intent DAGs.
     remoteintents_precon = Vector{Tuple{UUID, UUID}}()
-    _recursive_getmultidomainremoteintents!(remoteintents, remoteintents_precon, idagsdict, ibnfid, intentid, subidag)
-    return remoteintents, remoteintents_precon
+    _recursive_getmultidomainremoteintents!(remoteintents, remoteintents_precon, idagsdict, ibnfid, intentid, subidag, calltups, directionforward)
+    return remoteintents, remoteintents_precon, directionforward
 end
 
-function _recursive_getmultidomainremoteintents!(remoteintents::Vector{Tuple{UUID, UUID}}, remoteintents_precon::Vector{Tuple{UUID, UUID}}, idagsdict::Dict{UUID, IntentDAG}, ibnfid::UUID, intentid::Union{UUID,Nothing}, subidag::Symbol)
+function _recursive_getmultidomainremoteintents!(remoteintents::Vector{Tuple{UUID, UUID}}, remoteintents_precon::Vector{Tuple{UUID, UUID}}, idagsdict::Dict{UUID, IntentDAG}, ibnfid::UUID, intentid::Union{UUID,Nothing}, subidag::Symbol, calltups::Vector{Tuple{UUID, UUID}}, directionforward::Vector{Bool})
     haskey(idagsdict, ibnfid) || return
     idag = idagsdict[ibnfid]
     involvedgraphnodes = getinvolvednodespersymbol(idag, intentid, subidag)
     for idagnode in MINDF.getidagnodes(idag)[involvedgraphnodes]
-        if getintent(idagnode) isa RemoteIntent && MINDF.getisinitiator(getintent(idagnode))
-            tup = (getibnfid(getintent(idagnode)), getidagnodeid(getintent(idagnode)))
-            tupprev = (ibnfid, getidagnodeid(idagnode))
-            if tup ∉ remoteintents
+        if getintent(idagnode) isa RemoteIntent
+            calltup = nothing
+            if MINDF.getisinitiator(getintent(idagnode))
+                tup = (getibnfid(getintent(idagnode)), getidagnodeid(getintent(idagnode)))
+                tupprev = (ibnfid, getidagnodeid(idagnode))
+                calltup = tup
+            else
+                if subidag == :connected
+                    tup = (getibnfid(getintent(idagnode)), getidagnodeid(getintent(idagnode)))
+                    tupprev = (ibnfid, getidagnodeid(idagnode))
+                    calltup = tupprev
+                end
+            end
+            if !isnothing(calltup) && calltup ∉ calltups && tup ∉ remoteintents
                 push!(remoteintents, tup)
-                push!(remoteintents_precon, (ibnfid, getidagnodeid(idagnode)))
-                _recursive_getmultidomainremoteintents!(remoteintents, remoteintents_precon, idagsdict, tup... , subidag)
+                push!(remoteintents_precon, tupprev)
+                push!(calltups, calltup)
+                if calltup == tup
+                    push!(directionforward, true)
+                elseif calltup == tupprev
+                    push!(directionforward, false)
+                end
+                _recursive_getmultidomainremoteintents!(remoteintents, remoteintents_precon, idagsdict, calltup... , subidag, calltups, directionforward)
             end
         end
     end
@@ -165,7 +183,7 @@ end
 
 function getinvolvednodespersymbol(idag::IntentDAG, intentid::Union{UUID,Nothing}, subidag::Symbol)
     if subidag == :connected
-        return MINDF.getidagnodeidxsconnected(idag, intentid)
+        return MINDF.getidagnodeidxsconnected(idag, intentid; includeroot=true)
     elseif subidag == :descendants
         return MINDF.getidagnodeidxsdescendants(idag, intentid; includeroot=true)
     elseif subidag == :exclusivedescendants
